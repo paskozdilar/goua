@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 )
 
 const (
@@ -44,19 +43,13 @@ func run() error {
 	log.Printf("Latest release: %s", r.TagName)
 
 	for _, a := range r.Assets {
-		var dir string
-		switch a.Name {
-		case "open62541.c":
-			dir = filepath.Join(OutputDir, "src")
-		case "open62541.h":
-			dir = filepath.Join(OutputDir, "include")
-		default:
+		if a.Name != "open62541.h" && a.Name != "open62541.c" {
 			log.Printf("Skipping asset: %s", a.Name)
 			continue
 		}
 
 		log.Printf("Downloading asset: %s", a.Name)
-		if err := downloadAsset(dir, a); err != nil {
+		if err := downloadAsset(a); err != nil {
 			return fmt.Errorf("downloading asset %s: %v", a.Name, err)
 		}
 	}
@@ -83,18 +76,14 @@ func getLatestRelease() (*Release, error) {
 	return r, nil
 }
 
-func downloadAsset(dir string, a Asset) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("create output directory %s: %w", OutputDir, err)
-	}
-
+func downloadAsset(a Asset) error {
 	resp, err := http.Get(a.BrowserDownloadURL)
 	if err != nil {
 		return fmt.Errorf("HTTP GET %s: %w", a.BrowserDownloadURL, err)
 	}
 	defer resp.Body.Close()
 
-	file, err := os.Create(filepath.Join(dir, a.Name))
+	file, err := os.Create(a.Name)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", a.Name, err)
 	}
