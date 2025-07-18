@@ -5,12 +5,14 @@ package main
  */
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 const (
@@ -35,13 +37,18 @@ func main() {
 }
 
 func run() error {
-	log.Printf("Starting download of latest open62541 release...")
 	r, err := getLatestRelease()
 	if err != nil {
 		return fmt.Errorf("getting latest release: %w", err)
 	}
 	log.Printf("Latest release: %s", r.TagName)
 
+	if alreadyInstalled(r.TagName) {
+		log.Printf("Release %s is already installed, skipping download.", r.TagName)
+		return nil
+	}
+
+	log.Printf("Starting download of latest open62541 release...")
 	for _, a := range r.Assets {
 		if a.Name != "open62541.h" && a.Name != "open62541.c" {
 			log.Printf("Skipping asset: %s", a.Name)
@@ -56,6 +63,30 @@ func run() error {
 	log.Printf("Finished downloading assets for open62541 release %s", r.TagName)
 
 	return nil
+}
+
+func alreadyInstalled(tag string) bool {
+	for _, file := range []string{"open62541.h", "open62541.c"} {
+		f, err := os.Open(file)
+		if err != nil {
+			return false // File does not exist, not installed
+		}
+		defer f.Close()
+
+		s := bufio.NewScanner(f)
+		prefix := " * Git-Revision:"
+		for s.Scan() {
+			line := s.Text()
+			if strings.HasPrefix(line, prefix) {
+				version := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+				if version != tag {
+					return false // Installed version does not match the latest release
+				}
+				break
+			}
+		}
+	}
+	return true
 }
 
 func getLatestRelease() (*Release, error) {
