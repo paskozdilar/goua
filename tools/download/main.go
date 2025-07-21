@@ -120,6 +120,13 @@ func downloadAsset(a Asset) error {
 	}
 	defer file.Close()
 
+	// If .c file, add go:build tag to prevent compilation by gopls
+	if strings.HasSuffix(a.Name, ".c") {
+		if _, err := file.WriteString("//go:build ignore\n"); err != nil {
+			return fmt.Errorf("write build tag to file %s: %w", a.Name, err)
+		}
+	}
+
 	if _, err := io.Copy(file, resp.Body); err != nil {
 		return fmt.Errorf("write to file %s: %w", a.Name, err)
 	}
