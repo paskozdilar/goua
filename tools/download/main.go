@@ -43,8 +43,8 @@ func run() error {
 	}
 	log.Printf("Latest release: %s", r.TagName)
 
-	if alreadyInstalled(r.TagName) {
-		log.Printf("Release %s is already installed, skipping download.", r.TagName)
+	if alreadyDownloaded(r.TagName) {
+		log.Printf("Release %s is already downloaded, skipping download.", r.TagName)
 		return nil
 	}
 
@@ -65,11 +65,11 @@ func run() error {
 	return nil
 }
 
-func alreadyInstalled(tag string) bool {
+func alreadyDownloaded(tag string) bool {
 	for _, file := range []string{"open62541.h", "open62541.c"} {
 		f, err := os.Open(file)
 		if err != nil {
-			return false // File does not exist, not installed
+			return false // File does not exist, not downloaded
 		}
 		defer f.Close()
 
